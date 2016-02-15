@@ -12,4 +12,25 @@ Current: ACS758-050B -> OP284 gain stage (for resolution enchancement)
 
 This code will compile with GCC ARM embedded suite https://launchpad.net/gcc-arm-embedded
 
- 
+
+
+
+Screen 20x4 HD:
+
+   01234567890123456789
+ 1 000.0V    00.000A    ; voltage, current
+ 2 0000.0W   0000.0VA   ; real power, apparent power
+ 3 PF=x.xx   cos(f)=xxx ; powerfactor, cos(fii)
+ 4 000.00Hz             ; mains freq.
+
+
+BOM:
+
+  STM32F103 minimum system     5 USD
+  20x4 display                 4 USD
+  ACS758-050B		       4 USD
+  2 x 8V transformer          10 USD
+  some capacitor & resistors  10 USD
+  PCB                          5 USD
+
+  Total                       38 USD
