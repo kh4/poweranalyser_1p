@@ -2,10 +2,14 @@ Single phase power analyser.
 
 This is an effort to create a simple and affordable power analyser for single phase opearation.
 
-Measurement circuit:
-
+* Measurement circuit:
+ 
 Voltage: transformer -> capacitor -> resistor divider
 
 Current: ACS758-050B -> OP284 gain stage (for resolution enchancement)
+
+* Compilation:
+
+This code will compile with GCC ARM embedded suite https://launchpad.net/gcc-arm-embedded
 
  
