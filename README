@@ -1,0 +1,11 @@
+Single phase power analyser.
+
+This is an effort to create a simple and affordable power analyser for single phase opearation.
+
+Measurement circuit:
+
+Voltage: transformer -> capacitor -> resistor divider
+
+Current: ACS758-050B -> OP284 gain stage (for resolution enchancement)
+
+ 
