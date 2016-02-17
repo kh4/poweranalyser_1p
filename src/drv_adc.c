@@ -1,14 +1,14 @@
 #include "board.h"
 
 /*
-    3 x 2 channel ADC
+    2 x 2 channel ADC
 */
 
 #define ADC1_DR_Address    ((uint32_t)0x4001244C)
-__IO uint32_t ADC_DualConvertedValueTab[6];
-uint16_t __zero[6];
+__IO uint32_t ADC_DualConvertedValueTab[4];
+uint16_t __zero[4];
 volatile uint8_t __calibrating = 0;
-uint32_t __zeroSums[6];
+uint32_t __zeroSums[4];
 uint16_t __zeroCount;
 
 
@@ -18,15 +18,15 @@ void __handleCalibration(uint16_t *values)
 {
   int i;
   if (__zeroCount == 0) {
-    for (i=0; i<6; i++)
+    for (i=0; i<4; i++)
       __zeroSums[i]=values[i];
     __zeroCount++;
   } else if (__zeroCount >= CAL_SAMPLES) {
     __calibrating = 0;
-    for (i=0; i<6; i++)
+    for (i=0; i<4; i++)
       __zero[i] = __zeroSums[i] / CAL_SAMPLES;
   } else {
-    for (i=0; i<6; i++)
+    for (i=0; i<4; i++)
       __zeroSums[i]+=values[i];
     __zeroCount++;
   }
@@ -35,16 +35,16 @@ void __handleCalibration(uint16_t *values)
 void __processADC(bool isFull)
 {
   int i;
-  uint16_t _values[6];
-  for (i = 0; i < 3; i++) {
-    uint8_t idx = (isFull ? 3 : 0) + i;
+  uint16_t _values[4];
+  for (i = 0; i < 2; i++) {
+    uint8_t idx = (isFull ? 2 : 0) + i;
     _values[i * 2] = ADC_DualConvertedValueTab[idx] & 0xfff;
     _values[i * 2 + 1] = (ADC_DualConvertedValueTab[idx]>>16) & 0xfff;
   }
   if (__calibrating)  {
     __handleCalibration(_values);
   } else {
-    for (i=0; i<6; i++)
+    for (i=0; i<4; i++)
       _values[i]-=__zero[i];
     handleValuesFromADC((int16_t*)_values);
   }
@@ -81,7 +81,7 @@ void adcInit()
     DMA_InitStructure.DMA_PeripheralBaseAddr = (uint32_t)ADC1_DR_Address;
     DMA_InitStructure.DMA_MemoryBaseAddr = (uint32_t)ADC_DualConvertedValueTab;
     DMA_InitStructure.DMA_DIR = DMA_DIR_PeripheralSRC;
-    DMA_InitStructure.DMA_BufferSize = 6;
+    DMA_InitStructure.DMA_BufferSize = 4;
     DMA_InitStructure.DMA_PeripheralInc = DMA_PeripheralInc_Disable;
     DMA_InitStructure.DMA_MemoryInc = DMA_MemoryInc_Enable;
     DMA_InitStructure.DMA_PeripheralDataSize = DMA_PeripheralDataSize_Word;
@@ -108,12 +108,11 @@ void adcInit()
   ADC_InitStructure.ADC_ContinuousConvMode = ENABLE;
   ADC_InitStructure.ADC_ExternalTrigConv = ADC_ExternalTrigConv_None;
   ADC_InitStructure.ADC_DataAlign = ADC_DataAlign_Right;
-  ADC_InitStructure.ADC_NbrOfChannel = 3;
+  ADC_InitStructure.ADC_NbrOfChannel = 2;
   ADC_Init(ADC1, &ADC_InitStructure);
   /* ADC1 regular channels configuration */
   ADC_RegularChannelConfig(ADC1, ADC_Channel_0, 1, ADC_SampleTime_239Cycles5);
   ADC_RegularChannelConfig(ADC1, ADC_Channel_2, 2, ADC_SampleTime_239Cycles5);
-  ADC_RegularChannelConfig(ADC1, ADC_Channel_4, 3, ADC_SampleTime_239Cycles5);
   /* Enable ADC1 DMA */
   ADC_DMACmd(ADC1, ENABLE);
 /* ADC2 configuration ------------------------------------------------------*/
@@ -122,12 +121,11 @@ void adcInit()
   ADC_InitStructure.ADC_ContinuousConvMode = ENABLE;
   ADC_InitStructure.ADC_ExternalTrigConv = ADC_ExternalTrigConv_None;
   ADC_InitStructure.ADC_DataAlign = ADC_DataAlign_Right;
-  ADC_InitStructure.ADC_NbrOfChannel = 3;
+  ADC_InitStructure.ADC_NbrOfChannel = 2;
   ADC_Init(ADC2, &ADC_InitStructure);
   /* ADC2 regular channels configuration */
   ADC_RegularChannelConfig(ADC2, ADC_Channel_1, 1, ADC_SampleTime_239Cycles5);
   ADC_RegularChannelConfig(ADC2, ADC_Channel_3, 2, ADC_SampleTime_239Cycles5);
-  ADC_RegularChannelConfig(ADC2, ADC_Channel_5, 3, ADC_SampleTime_239Cycles5);
   /* Enable ADC2 external trigger conversion */
   ADC_ExternalTrigConvCmd(ADC2, ENABLE);
 
