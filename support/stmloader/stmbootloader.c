@@ -254,7 +254,7 @@ void stmLoader(serialStruct_t *s, FILE *fp, unsigned char overrideParity, unsign
 	stmWaitAck(s, STM_RETRIES_LONG);
 	printf("\n");
 
-/*
+
 	flash_size:
 	// read Flash size
 	c = getResults[3];
@@ -288,7 +288,7 @@ void stmLoader(serialStruct_t *s, FILE *fp, unsigned char overrideParity, unsign
 	b1 = serialRead(s);
 	b2 = serialRead(s);
 	printf("STM Flash Size: %dKB\n", b2<<8 | b1);
-*/
+
 
 	// erase flash
 	erase_flash:
