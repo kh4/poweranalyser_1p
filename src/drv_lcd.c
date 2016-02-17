@@ -52,14 +52,16 @@ const char __lcdCGRAM[64] = {
   0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
   0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
   0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-  0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
+  0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
+};
 
 void __lcdLoadCGRAM()
 {
   uint8_t i;
   __lcdWriteByte(1, 0x40); // CGRAM start
-  for (i = 0; i < sizeof(__lcdCGRAM); i++)
+  for (i = 0; i < sizeof(__lcdCGRAM); i++) {
     __lcdWriteByte(0, __lcdCGRAM[i]);
+  }
 }
 
 void lcdClear()
@@ -88,9 +90,24 @@ void lcdInit()
 }
 
 
-void lcdWriteLine(uint8_t row, char *txt) {
-  uint8_t i;
-  __lcdWriteByte(1, 0x80 | (row ? 0x40 : 0x00));
+void lcdWriteLine(uint8_t row, char *txt)
+{
+  uint8_t i,offset;
+  switch (row) {
+  case 1:
+    offset = 0x40;
+    break;
+  case 2:
+    offset = 0x14;
+    break;
+  case 3:
+    offset = 0x54;
+    break;
+  default:
+    offset = 0;
+  }
+
+  __lcdWriteByte(1, 0x80 + offset);
   delayMicroseconds(100);
   for (i = 0; i < 20; i++) {
     __lcdWriteByte(0, (*txt)?*(txt++):' ');

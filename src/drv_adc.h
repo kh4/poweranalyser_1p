@@ -1,5 +1,3 @@
 #include "board.h"
 
-void adcInit();
-void adcCalibrateStart();
-uint8_t adcCalibrateWait();
+void adcInit(void (*)(int16_t *));

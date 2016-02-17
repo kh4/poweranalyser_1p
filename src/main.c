@@ -7,7 +7,7 @@ int8_t oldscreen = 99;
 
 static void _putc(void *p, char c)
 {
-    uartWrite(c);
+  uartWrite(c);
 }
 
 
@@ -26,17 +26,9 @@ void checkBootLoaderEntry(bool wait)
 
 void calibrate()
 {
-  uint8_t p;
   lcdWriteLine(0,"Calibrating ADC");
-  printf("Calibrating ADC...");
-  adcCalibrateStart();
-  for (p = 0; p!=255 ; p=adcCalibrateWait()) {
-    char line[21];
-    sprintf(line,"%3d%%",p);
-    lcdWriteLine(1, line);
-    delay(100);
-  }
-  printf("OK\n");
+  // tbd
+  lcdWriteLine(1,"Done");
 }
 
 int main(void)
@@ -48,7 +40,7 @@ int main(void)
   checkBootLoaderEntry(true);
   ledInit();
   // rotaryInit();
-  adcInit();
+  adcInit(handleValuesFromADC);
   delay(10);
   calibrate();
   // loop

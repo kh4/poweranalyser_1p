@@ -41,10 +41,18 @@ void resetMeasurement()
 
 void integrateMeasurement(int16_t u, int16_t i) // u in 0.1V, i in 1mA
 {
-  if (u > maxU) maxU = u;
-  if (u < minU) minU = u;
-  if (i > maxI) maxI = i;
-  if (i < minI) minI = i;
+  if (u > maxU) {
+    maxU = u;
+  }
+  if (u < minU) {
+    minU = u;
+  }
+  if (i > maxI) {
+    maxI = i;
+  }
+  if (i < minI) {
+    minI = i;
+  }
   sumU2 += (int32_t)u * (int32_t)u;
   sumI2 += (int32_t)i * (int32_t)i;
   sumUI = u * i;
@@ -60,8 +68,9 @@ int detectZC(int16_t u)
       return 1;
     }
   } else {
-    if (u < ZC_THRESHOLD)
+    if (u < ZC_THRESHOLD) {
       zcstate = 1;
+    }
   }
   return 0;
 }
@@ -74,8 +83,9 @@ void handleValuesFromADC(int16_t values[4]) // values are U, I, I*10, I*100
   int16_t _i10 = values[2];
   int16_t _i100 = values[3];
 
-  if ((__state == 0) || (__state == 3))
+  if ((__state == 0) || (__state == 3)) {
     return;
+  }
 
   if (__state == 1) {
     // wait until it crosses positive and go into measurement mode
@@ -87,7 +97,9 @@ void handleValuesFromADC(int16_t values[4]) // values are U, I, I*10, I*100
     }
   }
 
-  if (detectZC(_u)) __cycles++;
+  if (detectZC(_u)) {
+    __cycles++;
+  }
 
   if (__cycles >= CYCLES) {
     __state = 3; // measurement done
@@ -103,7 +115,8 @@ void handleValuesFromADC(int16_t values[4]) // values are U, I, I*10, I*100
 #define TIMEOUT  5000
 
 void pfStartMeasure()
-{ // return non zero if in trouble
+{
+  // return non zero if in trouble
   __start = millis();
   resetMeasurement();
   __state = 1;
