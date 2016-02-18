@@ -3,10 +3,15 @@ Single phase power analyser.
 This is an effort to create a simple and affordable power analyser for single phase opearation.
 
 * Measurement circuit:
- 
+
 Voltage: transformer -> resistor divider
+  Resistor network is used to divide the transformer output to about 3 Vpp for
+  normal conditions (240Vrms)  allowing slight overvoltage.
 
 Current: ACS758-050B -> OP284 gain stage (for resolution enchancement)
+  As the noise of the ACS758 will limit the resolution to under 12 bits,
+  there is no need to use separate AD inputs, just single gain stage
+  pumping full scale to +-20 amps or so (~14amps RMS).
 
 * Compilation:
 
