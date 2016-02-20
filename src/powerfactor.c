@@ -12,8 +12,8 @@
 //
 //
 
-#define USCALE (803.3 / 4096.0)
-#define ISCALE (82.5 / 4096.0)
+#define USCALE (1.0)
+#define ISCALE (1.0)
 
 #define CYCLES 100
 
@@ -22,9 +22,16 @@ volatile int32_t  sumU2, sumI2;
 volatile int32_t  sumUI;
 volatile uint32_t measurementTime;
 volatile uint32_t __samples;
-volatile uint8_t  __state = 0;
 volatile uint16_t __cycles;
+
+#define MEASUREMENT_STARTED 1
+#define MEASUREMENT_RUNNING 2
+#define MEASUREMENT_DONE    4
+#define MEASUREMENT_VALID   8 // if not set likely timeout occured
+
+volatile uint8_t measurementState;
 uint32_t __start;
+
 
 
 struct pfResults pfResults;
@@ -56,7 +63,6 @@ void integrateMeasurement(int16_t u, int16_t i) // u in 0.1V, i in 1mA
   sumU2 += (int32_t)u * (int32_t)u;
   sumI2 += (int32_t)i * (int32_t)i;
   sumUI = u * i;
-  __samples++;
 }
 
 int detectZC(int16_t u)
@@ -75,80 +81,97 @@ int detectZC(int16_t u)
   return 0;
 }
 
+#define TIMEOUT_US 3000000
 
-void handleValuesFromADC(int16_t values[4]) // values are U, I, I*10, I*100
+void handleValuesFromADC(int16_t values[2]) // values are U, I
 {
   int16_t _u = values[0];
   int16_t _i = values[1];
-  int16_t _i10 = values[2];
-  int16_t _i100 = values[3];
 
-  if ((__state == 0) || (__state == 3)) {
+  if (!(measurementState & MEASUREMENT_STARTED)) {
+    return;
+  }
+  __samples++;
+
+  if ((micros() - measurementTime) > TIMEOUT_US) {
+    measurementTime = micros() - measurementTime;
+    measurementState = MEASUREMENT_DONE; // and not valid
     return;
   }
 
-  if (__state == 1) {
+  if (!(measurementState & MEASUREMENT_RUNNING)) {
     // wait until it crosses positive and go into measurement mode
     if (detectZC(_u)) {
       measurementTime = micros();
-      __state = 2;
-    } else {
-      return;
+      measurementState |= MEASUREMENT_RUNNING;
+      __samples = 0;
     }
   }
 
-  if (detectZC(_u)) {
-    __cycles++;
+  if (measurementState & MEASUREMENT_RUNNING) {
+    if (detectZC(_u)) {
+      __cycles++;
+    }
+
+    if (__cycles >= CYCLES) {
+      measurementState = MEASUREMENT_DONE | MEASUREMENT_VALID;
+      measurementTime = micros() - measurementTime;
+      return;
+    }
+
+    integrateMeasurement(_u, _i);
   }
-
-  if (__cycles >= CYCLES) {
-    __state = 3; // measurement done
-    measurementTime = micros() - measurementTime;
-    return;
-  }
-
-  integrateMeasurement(_u, _i);
-
 }
 
-#define NOZC_TIME 2000 // 2s
-#define TIMEOUT  5000
+void pfCalibrateStart()
+{
+}
+
+bool pfCalibrateReady()
+{
+  return 1;
+}
 
 void pfStartMeasure()
 {
   // return non zero if in trouble
-  __start = millis();
+  measurementTime = micros();
   resetMeasurement();
-  __state = 1;
-
+  measurementState = MEASUREMENT_STARTED; // clears other bits
 }
 
 uint8_t pfWaitMeasure()
 {
-  // sampling with ZC detection
-  if ((__state == 1) || (__state == 2)) {
-    if ((millis() - __start) > TIMEOUT) {
-      __state = 0;
-      return 2; // error
-    } else {
-      return 1; // not ready
-    }
+  if (measurementState & MEASUREMENT_STARTED) {
+    return 0; // still running
   }
-  __state = 0;
+
+  if (!(measurementState & MEASUREMENT_DONE)) {
+    return 2; // not started
+  }
+
+  measurementState = 0;
 
   pfResults.frequency = 1000000.0 * (float) CYCLES / (float)measurementTime;
 
-  pfResults.Upp = (float)(maxU - minU) * 0.1;   // unit is 0.1V
-  pfResults.Ipp = (float)(maxI - minI) * 0.001; // unit is mA
+  pfResults.Upp = (float)(maxU - minU) * USCALE;
+  pfResults.Ipp = (float)(maxI - minI) * ISCALE;
 
-  pfResults.Urms = sqrtf((float)sumU2 / (float)__samples) * 0.1;
-  pfResults.Irms = sqrtf((float)sumI2 / (float)__samples) * 0.001;
+  pfResults.Urms = sqrtf((float)sumU2 / (float)__samples) * USCALE;
+  pfResults.Irms = sqrtf((float)sumI2 / (float)__samples) * ISCALE;
 
   pfResults.powerW  = pfResults.Urms * pfResults.Irms;
-  pfResults.powerVA = (float)sumUI / (float)__samples * 0.0001;
+  pfResults.powerVA = (float)sumUI / (float)__samples * USCALE * ISCALE;
   pfResults.powerFactor = pfResults.powerVA / pfResults.powerW;
 
-  return 0;
+  pfResults.samples = __samples;
+  pfResults.time = measurementTime;
+
+  if (!(measurementState & MEASUREMENT_VALID)) {
+    return 3; // error
+  } else {
+    return 1;
+  };
 }
 
 

@@ -26,10 +26,14 @@ void checkBootLoaderEntry(bool wait)
 
 void calibrate()
 {
+  lcdClear();
   lcdWriteLine(0,"Calibrating ADC");
-  // tbd
+  pfCalibrateStart();
+  while (!pfCalibrateReady());
   lcdWriteLine(1,"Done");
 }
+
+char line[21];
 
 int main(void)
 {
@@ -50,12 +54,43 @@ int main(void)
     delay(10);
     checkBootLoaderEntry(false);
     result = pfWaitMeasure();
-    if (result == 2) {
-      printf("Error..\n");
-      pfStartMeasure();
-    } else if (result==0) {
-      printf("Results...\n");
+    if (result) {
+      if (result > 1) {
+        lcdClear();
+        if (result == 3) {
+          lcdWriteLine(0,"Timeout");
+        } else {
+          lcdWriteLine(0,"Other Error");
+        }
+        sprintf(line,"S: %d T: %d",
+                pfResults.samples, pfResults.time);
+        lcdWriteLine(1,line);
+      } else {
+        lcdClear();
+        sprintf(line,"%6.1f V  %6.3 A",
+                pfResults.Urms,pfResults.Irms);
+        lcdWriteLine(0,line);
+        sprintf(line,"%6.1f W  %6.1 VA",
+                pfResults.powerW,pfResults.powerVA);
+        lcdWriteLine(1,line);
+        sprintf(line,"pf=%4.2f",
+                pfResults.powerFactor);
+        lcdWriteLine(2,line);
+        sprintf(line,"Freq. %6.2f",
+                pfResults.frequency);
+        lcdWriteLine(3,line);
+      }
       pfStartMeasure();
     }
   }
 }
+
+/*
+struct pfResults {
+  float Upp, Ipp, Urms, Irms;
+  float powerW, powerVA, powerFactor;
+  float frequency;
+  uint32_t samples,time;
+};
+
+*/
