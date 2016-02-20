@@ -26,11 +26,20 @@ void checkBootLoaderEntry(bool wait)
 
 void calibrate()
 {
+  uint8_t i = 0;
+  char line[21];
+  line[1] = 0;
   lcdClear();
   lcdWriteLine(0,"Calibrating ADC");
   pfCalibrateStart();
-  while (!pfCalibrateReady());
-  lcdWriteLine(1,"Done");
+  while ((i=pfCalibrating())) {
+    sprintf(line,"%03d%%",i);
+    lcdWriteLine(1,line);
+    checkBootLoaderEntry(false);
+    delay(100);
+  }
+  lcdWriteLine(1,"READY");
+  delay(500);
 }
 
 char line[21];
@@ -85,12 +94,3 @@ int main(void)
   }
 }
 
-/*
-struct pfResults {
-  float Upp, Ipp, Urms, Irms;
-  float powerW, powerVA, powerFactor;
-  float frequency;
-  uint32_t samples,time;
-};
-
-*/

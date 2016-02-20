@@ -2,7 +2,7 @@
 
 void handleValuesFromADC(int16_t[4]);
 void pfCalibrateStart();
-bool pfValibrateReady();
+uint8_t pfCalibrating();
 void pfStartMeasure();
 uint8_t pfWaitMeasure();
 

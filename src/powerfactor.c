@@ -16,23 +16,29 @@
 #define ISCALE (1.0)
 
 #define CYCLES 100
+#define CAL_CYCLES 500
+
+#define TIMEOUT_US 3000000
+#define CAL_TIMEOUT_US 5000000
 
 volatile int16_t  minU, maxU, minI, maxI;
 volatile int32_t  sumU2, sumI2;
 volatile int32_t  sumUI;
 volatile uint32_t measurementTime;
-volatile uint32_t __samples;
-volatile uint16_t __cycles;
+volatile int32_t __samples;
+volatile int16_t __cycles;
+
+int16_t caloffset[2] = {0,0};
+int32_t calsum[2];
 
 #define MEASUREMENT_STARTED 1
 #define MEASUREMENT_RUNNING 2
 #define MEASUREMENT_DONE    4
 #define MEASUREMENT_VALID   8 // if not set likely timeout occured
+#define MEASUREMENT_CALIBRATE 128
 
 volatile uint8_t measurementState;
 uint32_t __start;
-
-
 
 struct pfResults pfResults;
 
@@ -81,12 +87,33 @@ int detectZC(int16_t u)
   return 0;
 }
 
-#define TIMEOUT_US 3000000
+volatile int16_t lastu,lasti;
+volatile int16_t lastuc,lastic;
 
 void handleValuesFromADC(int16_t values[2]) // values are U, I
 {
-  int16_t _u = values[0];
-  int16_t _i = values[1];
+  values[0]-=2048;
+  values[1]-=2048;
+  lastu=values[0];
+  lasti=values[1];
+  int16_t _u = values[0] - caloffset[0];
+  int16_t _i = values[1] - caloffset[1];
+  lastuc=_u;
+  lastic=_i;
+
+  if (measurementState & MEASUREMENT_CALIBRATE) {
+    if (!(measurementState & MEASUREMENT_DONE)) {
+      calsum[0] += values[0];
+      calsum[1] += values[1];
+      __samples++;
+      if ((micros() - measurementTime) >= CAL_TIMEOUT_US) {
+        caloffset[0] = calsum[0] / __samples;
+        caloffset[1] = calsum[1] / __samples;
+        measurementState |= MEASUREMENT_DONE;
+      }
+    }
+    return;
+  }
 
   if (!(measurementState & MEASUREMENT_STARTED)) {
     return;
@@ -125,11 +152,29 @@ void handleValuesFromADC(int16_t values[2]) // values are U, I
 
 void pfCalibrateStart()
 {
+  caloffset[0] = 0;
+  caloffset[1] = 0;
+  calsum[0] = 0;
+  calsum[1] = 0;
+  __samples = 0;
+  measurementTime = micros();
+  measurementState = MEASUREMENT_CALIBRATE;
 }
 
-bool pfCalibrateReady()
+uint8_t pfCalibrating()
 {
-  return 1;
+  if ((measurementState & MEASUREMENT_CALIBRATE) &&
+      !(measurementState & MEASUREMENT_DONE)) {
+    uint32_t spent = micros() - measurementTime;
+    uint8_t out = (100 * spent) / CAL_TIMEOUT_US;
+    if (!out) {
+      out = 1;
+    }
+    return out;
+  } else {
+    measurementState = 0;
+    return 0;
+  }
 }
 
 void pfStartMeasure()
