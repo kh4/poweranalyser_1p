@@ -76,17 +76,25 @@ int main(void)
         lcdWriteLine(1,line);
       } else {
         lcdClear();
-        sprintf(line,"%6.1f V  %6.3 A",
+
+        //  01234567890123456789
+        //1 000.0 Vr  00.00 Ar
+        //2 000.0 Vpp 00.00 App
+        //3 0000.0W   0000.0VA
+        //4 00.0Hz pf=0.00
+
+        sprintf(line,"%5.1f Vr  %5.2 Ar",
                 pfResults.Urms,pfResults.Irms);
         lcdWriteLine(0,line);
-        sprintf(line,"%6.1f W  %6.1 VA",
-                pfResults.powerW,pfResults.powerVA);
+        sprintf(line,"%5.1f Vpp %5.2 App",
+                pfResults.Upp,pfResults.Ipp);
         lcdWriteLine(1,line);
-        sprintf(line,"pf=%4.2f",
-                pfResults.powerFactor);
+        sprintf(line,"%6.1f W   %6.1 VA",
+                pfResults.powerW,pfResults.powerVA);
         lcdWriteLine(2,line);
-        sprintf(line,"Freq. %6.2f",
-                pfResults.frequency);
+        sprintf(line,"%4.1Hz pf=%4.2f",
+                pfResults.frequency,
+                pfResults.powerFactor);
         lcdWriteLine(3,line);
       }
       pfStartMeasure();
