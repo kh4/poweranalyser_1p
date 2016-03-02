@@ -71,8 +71,11 @@ int main(void)
         lcdClear();
         if (result == 3) {
           lcdWriteLine(0,"Timeout");
+	  delay(500);
         } else {
-          lcdWriteLine(0,"Other Error");
+	  sprintf(line,"Error %d", result);
+	  lcdWriteLine(0,line);
+	  delay(500);
         }
       } else {
         int16_t t1,t2,t3,t4;

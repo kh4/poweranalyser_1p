@@ -33,8 +33,8 @@ int32_t calsum[2];
 
 #define MEASUREMENT_STARTED 1
 #define MEASUREMENT_RUNNING 2
-#define MEASUREMENT_DONE    4
-#define MEASUREMENT_VALID   8 // if not set likely timeout occured
+#define MEASUREMENT_VALID   4
+#define MEASUREMENT_ERROR   8
 #define MEASUREMENT_CALIBRATE 128
 
 volatile uint8_t measurementState;
@@ -102,16 +102,14 @@ void handleValuesFromADC(int16_t values[2]) // values are U, I
   lastic=_i;
 
   if (measurementState & MEASUREMENT_CALIBRATE) {
-    if (!(measurementState & MEASUREMENT_DONE)) {
       calsum[0] += values[0];
       calsum[1] += values[1];
       __samples++;
       if ((micros() - measurementTime) >= CAL_TIMEOUT_US) {
         caloffset[0] = calsum[0] / __samples;
         caloffset[1] = calsum[1] / __samples;
-        measurementState |= MEASUREMENT_DONE;
+        measurementState = 0;
       }
-    }
     return;
   }
 
@@ -122,7 +120,7 @@ void handleValuesFromADC(int16_t values[2]) // values are U, I
 
   if ((micros() - measurementTime) > TIMEOUT_US) {
     measurementTime = micros() - measurementTime;
-    measurementState = MEASUREMENT_DONE; // and not valid
+    measurementState = MEASUREMENT_ERROR;
     return;
   }
 
@@ -141,7 +139,7 @@ void handleValuesFromADC(int16_t values[2]) // values are U, I
     }
 
     if (__cycles >= CYCLES) {
-      measurementState = MEASUREMENT_DONE | MEASUREMENT_VALID;
+      measurementState = MEASUREMENT_VALID;
       measurementTime = micros() - measurementTime;
       return;
     }
@@ -163,8 +161,7 @@ void pfCalibrateStart()
 
 uint8_t pfCalibrating()
 {
-  if ((measurementState & MEASUREMENT_CALIBRATE) &&
-      !(measurementState & MEASUREMENT_DONE)) {
+  if (measurementState & MEASUREMENT_CALIBRATE) {
     uint32_t spent = micros() - measurementTime;
     uint8_t out = (100 * spent) / CAL_TIMEOUT_US;
     if (!out) {
@@ -172,7 +169,6 @@ uint8_t pfCalibrating()
     }
     return out;
   } else {
-    measurementState = 0;
     return 0;
   }
 }
@@ -191,32 +187,30 @@ uint8_t pfWaitMeasure()
     return 0; // still running
   }
 
-  if (!(measurementState & MEASUREMENT_DONE)) {
-    return 2; // not started
+  if (measurementState & MEASUREMENT_ERROR) {
+    return 3; // error from the interrupt routine, likely timeout
   }
 
-  pfResults.frequency = 1000000.0 * (float) CYCLES / (float)measurementTime;
+  if (measurementState & MEASUREMENT_VALID) {
+    pfResults.frequency = 1000000.0 * (float) CYCLES / (float)measurementTime;
 
-  pfResults.Upp = (float)(maxU - minU) * USCALE;
-  pfResults.Ipp = (float)(maxI - minI) * ISCALE;
+    pfResults.Upp = (float)(maxU - minU) * USCALE;
+    pfResults.Ipp = (float)(maxI - minI) * ISCALE;
 
-  pfResults.Urms = sqrtf((float)sumU2 / (float)__samples) * USCALE;
-  pfResults.Irms = sqrtf((float)sumI2 / (float)__samples) * ISCALE;
+    pfResults.Urms = sqrtf((float)sumU2 / (float)__samples) * USCALE;
+    pfResults.Irms = sqrtf((float)sumI2 / (float)__samples) * ISCALE;
 
-  pfResults.powerW  = pfResults.Urms * pfResults.Irms;
-  pfResults.powerVA = (float)sumUI / (float)__samples * USCALE * ISCALE;
-  pfResults.powerFactor = pfResults.powerVA / pfResults.powerW;
+    pfResults.powerW  = pfResults.Urms * pfResults.Irms;
+    pfResults.powerVA = (float)sumUI / (float)__samples * USCALE * ISCALE;
+    pfResults.powerFactor = pfResults.powerVA / pfResults.powerW;
 
-  pfResults.samples = __samples;
-  pfResults.time = measurementTime;
-
-  if (!(measurementState & MEASUREMENT_VALID)) {
-    measurementState = 0;
-    return 3; // error
-  } else {
+    pfResults.samples = __samples;
+    pfResults.time = measurementTime;
     measurementState = 0;
     return 1;
-  };
+  }
+
+  return 2; // other error;
 }
 
 
