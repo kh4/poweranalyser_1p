@@ -14,4 +14,3 @@ struct pfResults {
 };
 
 extern struct pfResults pfResults;
-

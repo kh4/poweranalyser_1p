@@ -73,7 +73,7 @@ void integrateMeasurement(int16_t u, int16_t i) // u in 0.1V, i in 1mA
 
 int detectZC(int16_t u)
 {
-  bool zcstate = 0;
+  static bool zcstate = 0;
   if (zcstate) {
     if (u >= 0) {
       zcstate = 0;
@@ -195,8 +195,6 @@ uint8_t pfWaitMeasure()
     return 2; // not started
   }
 
-  measurementState = 0;
-
   pfResults.frequency = 1000000.0 * (float) CYCLES / (float)measurementTime;
 
   pfResults.Upp = (float)(maxU - minU) * USCALE;
@@ -213,8 +211,10 @@ uint8_t pfWaitMeasure()
   pfResults.time = measurementTime;
 
   if (!(measurementState & MEASUREMENT_VALID)) {
+    measurementState = 0;
     return 3; // error
   } else {
+    measurementState = 0;
     return 1;
   };
 }

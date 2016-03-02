@@ -55,13 +55,16 @@ int main(void)
   // rotaryInit();
   adcInit(handleValuesFromADC);
   delay(10);
+  printf("Initializing...\n");
   calibrate();
+  printf("Running...\n");
   // loop
   pfStartMeasure();
   while (1) {
     uint8_t result;
     delay(10);
     checkBootLoaderEntry(false);
+
     result = pfWaitMeasure();
     if (result) {
       if (result > 1) {
@@ -71,10 +74,9 @@ int main(void)
         } else {
           lcdWriteLine(0,"Other Error");
         }
-        sprintf(line,"S: %d T: %d",
-                pfResults.samples, pfResults.time);
-        lcdWriteLine(1,line);
       } else {
+        int16_t t1,t2,t3,t4;
+        char   s1,s2;
         lcdClear();
 
         //  01234567890123456789
@@ -83,18 +85,53 @@ int main(void)
         //3 0000.0W   0000.0VA
         //4 00.0Hz pf=0.00
 
-        sprintf(line,"%5.1f Vr  %5.2 Ar",
-                pfResults.Urms,pfResults.Irms);
+        t1 = abs(pfResults.Urms * 10);
+        t2 = t1 % 10;
+        t1 = t1 / 10;
+        s1 = (pfResults.Urms < 0)?'-':' ';
+
+        t3 = abs(pfResults.Irms * 10);
+        t4 = t3 % 10;
+        t3 = t3 / 10;
+        s2 = (pfResults.Irms < 0)?'-':' ';
+
+        sprintf(line,"%c%03d.%01d Vr  %c%03d.%01d Ar",
+                s1,t1,t2,s2,t3,t4);
         lcdWriteLine(0,line);
-        sprintf(line,"%5.1f Vpp %5.2 App",
-                pfResults.Upp,pfResults.Ipp);
+
+        t1 = abs(pfResults.Upp * 10);
+        t2 = t1 % 10;
+        t1 = t1 / 10;
+        s1 = (pfResults.Upp < 0)?'-':' ';
+        t3 = abs(pfResults.Ipp * 10);
+        t4 = t3 % 10;
+        t3 = t3 / 10;
+        s2 = (pfResults.Ipp < 0)?'-':' ';
+        sprintf(line,"%c%03d.%01d Vpp %c%03d.%01d App",
+                s1,t1,t2,s2,t3,t4);
         lcdWriteLine(1,line);
-        sprintf(line,"%6.1f W   %6.1 VA",
-                pfResults.powerW,pfResults.powerVA);
+
+        t1 = abs(pfResults.powerW * 10);
+        t2 = t1 % 10;
+        t1 = t1 / 10;
+        s1 = (pfResults.powerW < 0)?'-':' ';
+        t3 = abs(pfResults.powerVA * 10);
+        t4 = t3 % 10;
+        t3 = t3 / 10;
+        s2 = (pfResults.powerVA < 0)?'-':' ';
+        sprintf(line,"%c%04d.%01d W %c%04d.%01d VA",
+                s1,t1,t2,s2,t3,t4);
+
         lcdWriteLine(2,line);
-        sprintf(line,"%4.1Hz pf=%4.2f",
-                pfResults.frequency,
-                pfResults.powerFactor);
+        t1 = pfResults.frequency * 10;
+        t2 = t1 % 10;
+        t1 = t1 / 10;
+        t3 = abs(pfResults.powerFactor * 100);
+        t4 = t3 % 100;
+        t3 = t3 / 100;
+        s2 = (pfResults.powerFactor < 0)?'-':' ';
+        sprintf(line,"%3d.%1dHz pf=%4d.%2d",
+                t1,t2,s2,t3,t4);
         lcdWriteLine(3,line);
       }
       pfStartMeasure();
