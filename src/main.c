@@ -69,14 +69,9 @@ int main(void)
     if (result) {
       if (result > 1) {
         lcdClear();
-        if (result == 3) {
-          lcdWriteLine(0,"Timeout");
-	  delay(500);
-        } else {
-	  sprintf(line,"Error %d", result);
-	  lcdWriteLine(0,line);
-	  delay(500);
-        }
+	sprintf(line,"Error %d", result);
+	lcdWriteLine(0,line);
+	delay(500);
       } else {
         int16_t t1,t2,t3,t4;
         char   s1,s2;
@@ -93,12 +88,12 @@ int main(void)
         t1 = t1 / 10;
         s1 = (pfResults.Urms < 0)?'-':' ';
 
-        t3 = abs(pfResults.Irms * 10);
-        t4 = t3 % 10;
-        t3 = t3 / 10;
+        t3 = abs(pfResults.Irms * 100);
+        t4 = t3 % 100;
+        t3 = t3 / 100;
         s2 = (pfResults.Irms < 0)?'-':' ';
 
-        sprintf(line,"%c%03d.%01d Vr  %c%03d.%01d Ar",
+        sprintf(line,"%c%03d.%01d Vr  %c%02d.%02d Ar",
                 s1,t1,t2,s2,t3,t4);
         lcdWriteLine(0,line);
 
@@ -106,11 +101,11 @@ int main(void)
         t2 = t1 % 10;
         t1 = t1 / 10;
         s1 = (pfResults.Upp < 0)?'-':' ';
-        t3 = abs(pfResults.Ipp * 10);
-        t4 = t3 % 10;
-        t3 = t3 / 10;
+        t3 = abs(pfResults.Ipp * 100);
+        t4 = t3 % 100;
+        t3 = t3 / 100;
         s2 = (pfResults.Ipp < 0)?'-':' ';
-        sprintf(line,"%c%03d.%01d Vpp %c%03d.%01d App",
+        sprintf(line,"%c%03d.%01d Vp  %c%02d.%02d Ap",
                 s1,t1,t2,s2,t3,t4);
         lcdWriteLine(1,line);
 
@@ -135,6 +130,7 @@ int main(void)
         s2 = (pfResults.powerFactor < 0)?'-':' ';
         sprintf(line,"%3d.%1dHz pf=%4d.%2d",
                 t1,t2,s2,t3,t4);
+	sprintf(line,"n=%d",pfResults.samples);
         lcdWriteLine(3,line);
       }
       pfStartMeasure();

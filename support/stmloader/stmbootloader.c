@@ -187,8 +187,7 @@ void stmLoader(serialStruct_t *s, FILE *fp, unsigned char overrideParity, unsign
 
 	if(!noSendR) {
 		top:
-		printf("Sending R to place Baseflight in bootloader, press a key to continue");
-		getchar();
+		printf("Sending R to jump into bootloader");
 		serialFlush(s);
 		c = 'R';
 		serialWrite(s, &c, 1);

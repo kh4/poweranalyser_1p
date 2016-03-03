@@ -12,21 +12,21 @@
 //
 //
 
-#define USCALE (1.0)
-#define ISCALE (1.0)
+#define USCALE (0.37)
+#define ISCALE (0.01)
 
-#define CYCLES 100
+#define CYCLES 10
 #define CAL_CYCLES 500
 
 #define TIMEOUT_US 3000000
 #define CAL_TIMEOUT_US 5000000
 
-volatile int16_t  minU, maxU, minI, maxI;
-volatile int32_t  sumU2, sumI2;
-volatile int32_t  sumUI;
+volatile int16_t  minU, minI, maxU, maxI;
+volatile int64_t  sumU2, sumI2;
+volatile int64_t  sumUI;
 volatile uint32_t measurementTime;
-volatile int32_t __samples;
-volatile int16_t __cycles;
+volatile int32_t samples;
+volatile int16_t cycles;
 
 int16_t caloffset[2] = {0,0};
 int32_t calsum[2];
@@ -49,7 +49,7 @@ void resetMeasurement()
 {
   maxU = minU = maxI = minI = 0;
   sumU2 = sumI2 = sumUI = 0;
-  __samples = __cycles = 0;
+  samples = cycles = 0;
 }
 
 void integrateMeasurement(int16_t u, int16_t i) // u in 0.1V, i in 1mA
@@ -66,9 +66,12 @@ void integrateMeasurement(int16_t u, int16_t i) // u in 0.1V, i in 1mA
   if (i < minI) {
     minI = i;
   }
-  sumU2 += (int32_t)u * (int32_t)u;
-  sumI2 += (int32_t)i * (int32_t)i;
-  sumUI = u * i;
+  sumU2 += (int64_t)u * (int64_t)u;
+  sumI2 += (int64_t)i * (int64_t)i;
+  sumUI = (int64_t)u * (int64_t)i;
+
+  samples++;
+
 }
 
 int detectZC(int16_t u)
@@ -104,10 +107,10 @@ void handleValuesFromADC(int16_t values[2]) // values are U, I
   if (measurementState & MEASUREMENT_CALIBRATE) {
       calsum[0] += values[0];
       calsum[1] += values[1];
-      __samples++;
+      samples++;
       if ((micros() - measurementTime) >= CAL_TIMEOUT_US) {
-        caloffset[0] = calsum[0] / __samples;
-        caloffset[1] = calsum[1] / __samples;
+        caloffset[0] = calsum[0] / samples;
+        caloffset[1] = calsum[1] / samples;
         measurementState = 0;
       }
     return;
@@ -116,29 +119,27 @@ void handleValuesFromADC(int16_t values[2]) // values are U, I
   if (!(measurementState & MEASUREMENT_STARTED)) {
     return;
   }
-  __samples++;
 
-  if ((micros() - measurementTime) > TIMEOUT_US) {
-    measurementTime = micros() - measurementTime;
-    measurementState = MEASUREMENT_ERROR;
-    return;
-  }
+  //  if ((micros() - measurementTime) > TIMEOUT_US) {
+  //    measurementTime = micros() - measurementTime;
+  //    measurementState = MEASUREMENT_ERROR;
+  //   return;
+  //}
 
   if (!(measurementState & MEASUREMENT_RUNNING)) {
     // wait until it crosses positive and go into measurement mode
     if (detectZC(_u)) {
       measurementTime = micros();
       measurementState |= MEASUREMENT_RUNNING;
-      __samples = 0;
     }
   }
 
   if (measurementState & MEASUREMENT_RUNNING) {
     if (detectZC(_u)) {
-      __cycles++;
+      cycles++;
     }
 
-    if (__cycles >= CYCLES) {
+    if (cycles >= CYCLES) {
       measurementState = MEASUREMENT_VALID;
       measurementTime = micros() - measurementTime;
       return;
@@ -154,7 +155,7 @@ void pfCalibrateStart()
   caloffset[1] = 0;
   calsum[0] = 0;
   calsum[1] = 0;
-  __samples = 0;
+  samples = 0;
   measurementTime = micros();
   measurementState = MEASUREMENT_CALIBRATE;
 }
@@ -194,17 +195,17 @@ uint8_t pfWaitMeasure()
   if (measurementState & MEASUREMENT_VALID) {
     pfResults.frequency = 1000000.0 * (float) CYCLES / (float)measurementTime;
 
-    pfResults.Upp = (float)(maxU - minU) * USCALE;
-    pfResults.Ipp = (float)(maxI - minI) * ISCALE;
+    pfResults.Upp = (float)(maxU - minU) * USCALE * 0.5;
+    pfResults.Ipp = (float)(maxI - minI) * ISCALE * 0.5 ;
 
-    pfResults.Urms = sqrtf((float)sumU2 / (float)__samples) * USCALE;
-    pfResults.Irms = sqrtf((float)sumI2 / (float)__samples) * ISCALE;
+    pfResults.Urms = sqrtf((float)sumU2 / (float)samples) * USCALE;
+    pfResults.Irms = sqrtf((float)sumI2 / (float)samples) * ISCALE;
 
     pfResults.powerW  = pfResults.Urms * pfResults.Irms;
-    pfResults.powerVA = (float)sumUI / (float)__samples * USCALE * ISCALE;
+    pfResults.powerVA = (float)sumUI / (float)samples * USCALE * ISCALE;
     pfResults.powerFactor = pfResults.powerVA / pfResults.powerW;
 
-    pfResults.samples = __samples;
+    pfResults.samples = samples;
     pfResults.time = measurementTime;
     measurementState = 0;
     return 1;
